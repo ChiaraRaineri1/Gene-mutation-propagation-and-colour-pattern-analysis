@@ -1,0 +1,105 @@
+/* --------------------------- */
+/* TURING INSTABILITY */
+/* --------------------------- */
+
+/* -------------- MODEL PROBLEM --------------- */
+/*  tau_1 u1_t - D_1 \Delta u1 = f(u1,u2) */
+/*  tau_2 u2_t - D_2 \Delta u2 = g(u1,u2) */
+/* -------------------------------------- */
+
+// ----------------
+// PHYSICAL PARAMETERS
+// Non-linear Turing 2D - Pattern formation (Dufiet model [Dufiet, Boissonad 1996])
+
+//Parameters
+real gamma = 1.0, alpha = 5.0; // Modify these parameters for question 2
+real beta = 5, d = 20;
+
+// Forcing terms
+macro ff(u1, u2) ( u1  - alpha*u2 + gamma*u1*u2-u1^3 ) // EOM
+macro gg(u1, u2) ( u1 - beta*u2 )                      // EOM
+
+// Initial data
+func u1init = 0.1*randreal1()-0.1*randreal1();
+func u2init = 0.1*randreal1()-0.1*randreal1();
+
+// ---------------------
+// SPACE & TIME DISCRETIZATION
+// ---------------------
+
+// Domain
+real L = 50.0, hstep = 0.02;
+int Nxy = 20;
+mesh Th = square(Nxy, Nxy, [2*L*x-L,2*L*y-L]);
+
+plot(Th, wait=1, cmm="Initial mesh");
+cout << ".:: Domain ::." << endl;
+cout << "... Triangles: " << Th.nt << endl;
+cout << "... Vertices:   " << Th.nv << endl;
+
+// Time
+real T = 20000.0, dt = 0.5, Nt = ceil(T/dt);
+
+// -------------------
+// DISCRETE FORMULATION
+// -------------------
+
+// Functional spaces
+fespace Vh(Th, [P2, P2], periodic=[[2,y],[4,y],[1,x],[3,x]]);
+Vh [uh1, uh2], [vh1, vh2], [uh1old, uh2old];
+
+// Fully-discrete formulation
+int i;
+problem reactdiff([uh1, uh2], [vh1, vh2], init=i, solver=LU) =
+      int2d(Th)( uh1*vh1/dt )
+    + int2d(Th)( uh2*vh2/dt )
+    + int2d(Th)( dx(uh1)*dx(vh1)+dy(uh1)*dy(vh1) )
+    + int2d(Th)( d*( dx(uh2)*dx(vh2)+dy(uh2)*dy(vh2) ))
+    - int2d(Th)( uh1old*vh1/dt + uh2old*vh2/dt )
+    - int2d(Th)( ff(uh1old,uh2old)*vh1 + gg(uh1old, uh2old)*vh2 );
+
+// ----------------
+// SOLUTION OF THE PROBLEM
+// ----------------
+
+// Initial time
+real t = 0.0;
+
+// Initial data interpolation
+[uh1, uh2] = [u1init, u2init];
+
+// Auxiliary graphical variables
+real[int] colorhsv=[
+	4./6., 1 , 0.75, // dark blue
+	4./6., 1 , 1, // blue
+	3./6., 1 , 1, // cyan
+	2./6., 1 , 1, // green 
+	1./6, 1, 1, // yellow
+	0, 1 , 1, // red
+	0, 1. , 0.75 // dark red
+];
+
+// ---------------
+// TIME-LOOP (iterating over time)
+// ---------------
+
+for (i = 0; i < Nt; i++)
+{
+	// Update current time
+	t = i*dt;
+
+	// Store the solution of the current time-step
+    [uh1old, uh2old] = [uh1, uh2];
+
+	// Solver
+	reactdiff;
+
+	// Plot (note that we plot only uh1, cf. [Dufiet, Boissonad 1996])	
+	if ((i%10) == 0){
+		plot(uh1, fill=true, hsv=colorhsv, value=true, cmm="Time t = "+t);
+	}
+
+}
+
+// Plot
+plot(uh1, wait = true, fill=true, hsv=colorhsv, value=true, cmm="Time t = "+t);
