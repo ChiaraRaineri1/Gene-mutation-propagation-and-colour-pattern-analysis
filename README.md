@@ -55,7 +55,7 @@ Investigates stable, spatially non-homogeneous chemical distributions responsibl
 ## 📁 Repository Structure
 
 - `project.m` – Main MATLAB file for activity 1
-- functions for activity 1: `FEnonlin.m`, `nonlinsolv.m`
+- Functions for activity 1: `FEnonlin.m`, `nonlinsolv.m`
 - `turing2d.edp` – FreeFEM analysis for activity 2
 
 ## 🧪 Tools & Methods
